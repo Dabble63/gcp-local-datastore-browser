@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Entity - {{ kind_name }} - Datastore Browser{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <i class="fas fa-edit"></i> Edit Entity
+        </h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('browse_kind', kind_name=kind_name) }}">{{ kind_name }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('view_entity', kind_name=kind_name, entity_id=entity_id) }}">{{ entity_id }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<form method="POST" id="editForm">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit"></i> Entity Properties
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="properties-container">
+                        {% for key, value in entity.items() %}
+                        {% if not key.startswith('__') %}
+                        <div class="mb-3 property-field">
+                            <label for="{{ key }}" class="form-label">{{ key }}</label>
+                            <div class="input-group">
+                                <textarea name="{{ key }}" id="{{ key }}" class="form-control" rows="3">{{ value | format_value }}</textarea>
+                                <button type="button" class="btn btn-outline-danger" onclick="removeProperty(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Use JSON format for complex types (objects, arrays, etc.)
+                            </small>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-success" onclick="addProperty()">
+                            <i class="fas fa-plus"></i> Add Property
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-key"></i> Entity Metadata
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless table-sm">
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold">Kind:</td>
+                                <td><code>{{ kind_name }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">ID:</td>
+                                <td><code>{{ entity_id }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Key:</td>
+                                <td><code class="text-break">{{ entity['__key__'] }}</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-save"></i> Save Changes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Entity
+                        </button>
+                        <a href="{{ url_for('view_entity', kind_name=kind_name, entity_id=entity_id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i> Help
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted">
+                        <p><strong>Data Types:</strong></p>
+                        <ul class="list-unstyled">
+                            <li>• Strings: Plain text</li>
+                            <li>• Numbers: 123, 45.67</li>
+                            <li>• Booleans: true, false</li>
+                            <li>• Arrays: [1, 2, 3]</li>
+                            <li>• Objects: {"key": "value"}</li>
+                            <li>• Null: null</li>
+                        </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let propertyCounter = 0;
+
+function addProperty() {
+    propertyCounter++;
+    const container = document.getElementById('properties-container');
+    const propertyDiv = document.createElement('div');
+    propertyDiv.className = 'mb-3 property-field';
+    propertyDiv.innerHTML = `
+        <label for="new_property_${propertyCounter}" class="form-label">
+            <input type="text" placeholder="Property name" class="form-control form-control-sm d-inline-block" style="width: 200px;" 
+                   onchange="updatePropertyName(this, ${propertyCounter})" required>
+        </label>
+        <div class="input-group">
+            <textarea name="new_property_${propertyCounter}" id="new_property_${propertyCounter}" 
+                      class="form-control" rows="3" placeholder="Property value"></textarea>
+            <button type="button" class="btn btn-outline-danger" onclick="removeProperty(this)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <small class="form-text text-muted">
+            Use JSON format for complex types (objects, arrays, etc.)
+        </small>
+    `;
+    container.appendChild(propertyDiv);
+}
+
+function updatePropertyName(input, counter) {
+    const textarea = document.getElementById(`new_property_${counter}`);
+    if (textarea && input.value) {
+        textarea.name = input.value;
+        textarea.id = input.value;
+        
+        // Update the label
+        const label = input.parentElement;
+        label.setAttribute('for', input.value);
+        label.innerHTML = input.value + label.innerHTML.substring(label.innerHTML.indexOf('<input'));
+    }
+}
+
+function removeProperty(button) {
+    const propertyField = button.closest('.property-field');
+    propertyField.remove();
+}
+
+// Validate JSON before submission
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    const textareas = this.querySelectorAll('textarea');
+    let hasError = false;
+    
+    textareas.forEach(textarea => {
+        const value = textarea.value.trim();
+        if (value) {
+            // Try to parse as JSON for validation
+            try {
+                if (value.startsWith('{') || value.startsWith('[') || 
+                    value === 'true' || value === 'false' || value === 'null' ||
+                    !isNaN(value)) {
+                    JSON.parse(value);
+                }
+            } catch (error) {
+                // If it looks like JSON but isn't valid, show error
+                if (value.startsWith('{') || value.startsWith('[')) {
+                    textarea.classList.add('is-invalid');
+                    hasError = true;
+                } else {
+                    textarea.classList.remove('is-invalid');
+                }
+            }
+        }
+    });
+    
+    if (hasError) {
+        e.preventDefault();
+        alert('Please fix invalid JSON values before saving.');
+    }
+});
+</script>
+{% endblock %}

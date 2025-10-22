@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}{{ kind_name }} - Datastore Browser{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            <i class="fas fa-table"></i> {{ kind_name }}
+            <span class="badge bg-secondary">{{ total_count }} entities</span>
+        </h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item active">{{ kind_name }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <a href="{{ url_for('new_entity', kind_name=kind_name) }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> New Entity
+        </a>
+    </div>
+</div>
+
+{% if entities %}
+<!-- Pagination Info -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <small class="text-muted">
+            Showing {{ ((page - 1) * per_page) + 1 }} to {{ ((page - 1) * per_page) + entities|length }} of {{ total_count }} entities
+        </small>
+    </div>
+    <div>
+        <form method="GET" class="d-flex align-items-center">
+            <label for="per_page" class="form-label me-2 mb-0">Per page:</label>
+            <select name="per_page" id="per_page" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Entities Table -->
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Key</th>
+                <th>Properties</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entity in entities %}
+            <tr>
+                <td>
+                    <strong>{{ entity['__id__'] }}</strong>
+                </td>
+                <td>
+                    <code class="entity-key">{{ entity['__key__'] }}</code>
+                </td>
+                <td class="property-value">
+                    {% set ns = namespace(count=0) %}
+                    {% for key, value in entity.items() %}
+                        {% if not key.startswith('__') %}
+                            {% set ns.count = ns.count + 1 %}
+                            {% if ns.count <= 3 %}
+                                <strong>{{ key }}:</strong> 
+                                <span class="text-muted">{{ value | format_value | truncate(50) }}</span>
+                                {% if not loop.last %}<br>{% endif %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if ns.count > 3 %}
+                        <small class="text-muted">... and {{ ns.count - 3 }} more</small>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="{{ url_for('view_entity', kind_name=kind_name, entity_id=entity['__id__']) }}" 
+                           class="btn btn-outline-primary" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{{ url_for('edit_entity', kind_name=kind_name, entity_id=entity['__id__']) }}" 
+                           class="btn btn-outline-warning" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button type="button" class="btn btn-outline-danger" title="Delete"
+                                onclick="deleteEntity('{{ entity['__id__'] }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Entity pagination">
+    <ul class="pagination justify-content-center">
+        {% if has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('browse_kind', kind_name=kind_name, page=page-1, per_page=per_page) }}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+            </li>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ p }}</span>
+                </li>
+            {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('browse_kind', kind_name=kind_name, page=p, per_page=per_page) }}">{{ p }}</a>
+                </li>
+            {% elif p == 4 or p == total_pages - 3 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('browse_kind', kind_name=kind_name, page=page+1, per_page=per_page) }}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-inbox text-muted" style="font-size: 4rem;"></i>
+    </div>
+    <h3 class="text-muted">No Entities Found</h3>
+    <p class="text-muted">No entities of kind "{{ kind_name }}" were found.</p>
+    <a href="{{ url_for('new_entity', kind_name=kind_name) }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Create First Entity
+    </a>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this entity? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteEntity(entityId) {
+    const deleteForm = document.getElementById('deleteForm');
+    deleteForm.action = `{{ url_for('delete_entity', kind_name=kind_name, entity_id='PLACEHOLDER') }}`.replace('PLACEHOLDER', entityId);
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

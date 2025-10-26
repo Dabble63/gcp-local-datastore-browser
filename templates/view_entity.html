@@ -40,9 +40,20 @@
                         {% for key, value in entity.items() %}
                         {% if not key.startswith('__') %}
                         <tr>
-                            <td class="fw-bold" style="width: 200px;">{{ key }}</td>
+                            <td class="fw-bold" style="width: 250px;">
+                                {{ key }} 
+                                <small class="text-muted">({{ value | get_type }})</small>
+                            </td>
                             <td>
                                 {% if value is string and (value.startswith('{') or value.startswith('[')) %}
+                                    <pre class="json-value">{{ value | format_value }}</pre>
+                                {% elif value | get_type == 'boolean' %}
+                                    <span class="badge {% if value %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if value %}True{% else %}False{% endif %}
+                                    </span>
+                                {% elif value | get_type == 'datetime' %}
+                                    <code class="text-info">{{ value | format_value }}</code>
+                                {% elif value | get_type == 'blob' %}
                                     <pre class="json-value">{{ value | format_value }}</pre>
                                 {% else %}
                                     <span class="text-break">{{ value | format_value }}</span>

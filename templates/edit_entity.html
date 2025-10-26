@@ -33,16 +33,63 @@
                         {% for key, value in entity.items() %}
                         {% if not key.startswith('__') %}
                         <div class="mb-3 property-field">
-                            <label for="{{ key }}" class="form-label">{{ key }}</label>
+                            <label for="{{ key }}" class="form-label">
+                                {{ key }} 
+                                <small class="text-muted">({{ value | get_type }})</small>
+                            </label>
                             <div class="input-group">
-                                <textarea name="{{ key }}" id="{{ key }}" class="form-control" rows="3">{{ value | format_value }}</textarea>
+                                {% if value | get_type == 'boolean' %}
+                                    <div class="form-control d-flex align-items-center">
+                                        <div class="form-check">
+                                            <input type="checkbox" name="{{ key }}" id="{{ key }}" 
+                                                   class="form-check-input" value="true"
+                                                   onchange="updateBooleanLabel(this)"
+                                                   {% if value %}checked{% endif %}>
+                                            <label class="form-check-label" for="{{ key }}">
+                                                {% if value %}True{% else %}False{% endif %}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% elif value | get_type == 'datetime' %}
+                                    <div class="input-group">
+                                        <input type="text" name="{{ key }}" id="{{ key }}" 
+                                               class="form-control font-monospace" 
+                                               value="{{ value | format_for_form }}"
+                                               placeholder="2025-10-22T10:30:00+00:00">
+                                        <button type="button" class="btn btn-outline-secondary" 
+                                                onclick="setCurrentDatetime('{{ key }}')" title="Set to current time">
+                                            <i class="fas fa-clock"></i>
+                                        </button>
+                                    </div>
+                                {% elif value | get_type == 'blob' %}
+                                    <div class="form-control d-flex flex-column">
+                                        <small class="text-muted mb-2">Current blob: {{ (value | string | length) }} bytes</small>
+                                        <textarea name="{{ key }}" id="{{ key }}" class="form-control" 
+                                                  rows="4" placeholder="Base64 encoded blob data">{{ value | format_for_form }}</textarea>
+                                    </div>
+                                {% else %}
+                                    <textarea name="{{ key }}" id="{{ key }}" class="form-control" 
+                                              rows="{% if value | get_type in ['array', 'object'] %}5{% elif value | get_type == 'blob' %}4{% else %}3{% endif %}">{{ value | format_for_form }}</textarea>
+                                {% endif %}
                                 <button type="button" class="btn btn-outline-danger" onclick="removeProperty(this)">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
                             <small class="form-text text-muted">
-                                Use JSON format for complex types (objects, arrays, etc.)
+                                {% if value | get_type == 'boolean' %}
+                                    Check/uncheck to set true/false
+                                {% elif value | get_type == 'datetime' %}
+                                    ISO format with timezone (e.g., 2025-10-22T10:30:00+00:00) - click clock for current time
+                                {% elif value | get_type == 'blob' %}
+                                    Base64 encoded binary data - edit carefully to preserve blob format
+                                {% elif value | get_type in ['array', 'object'] %}
+                                    Use JSON format for complex types
+                                {% else %}
+                                    Current type: {{ value | get_type }}
+                                {% endif %}
                             </small>
+                            <!-- Hidden field to store original type -->
+                            <input type="hidden" name="{{ key }}_type" value="{{ value | get_type }}">
                         </div>
                         {% endif %}
                         {% endfor %}
@@ -142,6 +189,17 @@ function addProperty() {
         <label for="new_property_${propertyCounter}" class="form-label">
             <input type="text" placeholder="Property name" class="form-control form-control-sm d-inline-block" style="width: 200px;" 
                    onchange="updatePropertyName(this, ${propertyCounter})" required>
+            <select class="form-select form-select-sm d-inline-block ms-2" style="width: 120px;" 
+                    onchange="updatePropertyType(this, ${propertyCounter})" id="type_${propertyCounter}">
+                <option value="string">string</option>
+                <option value="integer">integer</option>
+                <option value="float">float</option>
+                <option value="boolean">boolean</option>
+                <option value="datetime">datetime</option>
+                <option value="blob">blob</option>
+                <option value="array">array</option>
+                <option value="object">object</option>
+            </select>
         </label>
         <div class="input-group">
             <textarea name="new_property_${propertyCounter}" id="new_property_${propertyCounter}" 
@@ -153,26 +211,86 @@ function addProperty() {
         <small class="form-text text-muted">
             Use JSON format for complex types (objects, arrays, etc.)
         </small>
+        <input type="hidden" name="new_property_${propertyCounter}_type" value="string">
     `;
     container.appendChild(propertyDiv);
 }
 
 function updatePropertyName(input, counter) {
     const textarea = document.getElementById(`new_property_${counter}`);
+    const hiddenType = document.querySelector(`input[name="new_property_${counter}_type"]`);
+    
     if (textarea && input.value) {
         textarea.name = input.value;
         textarea.id = input.value;
         
+        if (hiddenType) {
+            hiddenType.name = input.value + '_type';
+        }
+        
         // Update the label
         const label = input.parentElement;
         label.setAttribute('for', input.value);
-        label.innerHTML = input.value + label.innerHTML.substring(label.innerHTML.indexOf('<input'));
+    }
+}
+
+function updatePropertyType(select, counter) {
+    const hiddenType = document.querySelector(`input[name*="_type"][name*="${counter}"]`);
+    const textarea = document.getElementById(`new_property_${counter}`);
+    
+    if (hiddenType) {
+        hiddenType.value = select.value;
+    }
+    
+    // Update placeholder based on type
+    if (textarea) {
+        switch(select.value) {
+            case 'boolean':
+                textarea.placeholder = 'true or false';
+                break;
+            case 'integer':
+                textarea.placeholder = '123';
+                break;
+            case 'float':
+                textarea.placeholder = '123.45';
+                break;
+            case 'datetime':
+                textarea.placeholder = '2025-10-22T10:30:00 (ISO format)';
+                break;
+            case 'blob':
+                textarea.placeholder = 'SGVsbG8gV29ybGQ= (Base64 encoded binary data)';
+                break;
+            case 'array':
+                textarea.placeholder = '[1, 2, 3] or ["a", "b", "c"]';
+                break;
+            case 'object':
+                textarea.placeholder = '{"key": "value"}';
+                break;
+            default:
+                textarea.placeholder = 'Property value';
+        }
     }
 }
 
 function removeProperty(button) {
     const propertyField = button.closest('.property-field');
     propertyField.remove();
+}
+
+function updateBooleanLabel(checkbox) {
+    const label = checkbox.nextElementSibling;
+    if (label && label.classList.contains('form-check-label')) {
+        label.textContent = checkbox.checked ? 'True' : 'False';
+    }
+}
+
+function setCurrentDatetime(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        // Get current datetime in ISO format with timezone
+        const now = new Date();
+        field.value = now.toISOString();
+    }
 }
 
 // Validate JSON before submission

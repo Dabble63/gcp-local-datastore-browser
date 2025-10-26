@@ -118,10 +118,10 @@ start_emulator() {
 set_env_vars() {
     echo "🔧 Setting environment variables..."
     export DATASTORE_EMULATOR_HOST=localhost:8081
-    export GOOGLE_CLOUD_PROJECT=test-project
+    export GOOGLE_CLOUD_PROJECT=mephysio-hrd-local
     echo "✅ Environment variables set"
     echo "   DATASTORE_EMULATOR_HOST=localhost:8081"
-    echo "   GOOGLE_CLOUD_PROJECT=test-project"
+    echo "   GOOGLE_CLOUD_PROJECT=mephysio-hrd-local"
     echo ""
 }
 

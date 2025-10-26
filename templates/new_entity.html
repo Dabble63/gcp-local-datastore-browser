@@ -68,7 +68,7 @@
                             </tr>
                             <tr>
                                 <td class="fw-bold">Project:</td>
-                                <td><code>{{ request.environ.get('GOOGLE_CLOUD_PROJECT', 'test-project') }}</code></td>
+                                <td><code>{{ request.environ.get('GOOGLE_CLOUD_PROJECT', 'me-physio-hrd') }}</code></td>
                             </tr>
                         </tbody>
                     </table>
@@ -138,7 +138,7 @@
 <script>
 let propertyCounter = 0;
 
-function addProperty(name = '', value = '') {
+function addProperty(name = '', value = '', type = 'string') {
     propertyCounter++;
     const container = document.getElementById('properties-container');
     const propertyDiv = document.createElement('div');
@@ -147,6 +147,17 @@ function addProperty(name = '', value = '') {
         <label for="property_${propertyCounter}" class="form-label">
             <input type="text" placeholder="Property name" class="form-control form-control-sm d-inline-block" style="width: 200px;" 
                    value="${name}" onchange="updatePropertyName(this, ${propertyCounter})" required>
+            <select class="form-select form-select-sm d-inline-block ms-2" style="width: 120px;" 
+                    onchange="updatePropertyType(this, ${propertyCounter})" id="type_${propertyCounter}">
+                <option value="string" ${type === 'string' ? 'selected' : ''}>string</option>
+                <option value="integer" ${type === 'integer' ? 'selected' : ''}>integer</option>
+                <option value="float" ${type === 'float' ? 'selected' : ''}>float</option>
+                <option value="boolean" ${type === 'boolean' ? 'selected' : ''}>boolean</option>
+                <option value="datetime" ${type === 'datetime' ? 'selected' : ''}>datetime</option>
+                <option value="blob" ${type === 'blob' ? 'selected' : ''}>blob</option>
+                <option value="array" ${type === 'array' ? 'selected' : ''}>array</option>
+                <option value="object" ${type === 'object' ? 'selected' : ''}>object</option>
+            </select>
         </label>
         <div class="input-group">
             <textarea name="property_${propertyCounter}" id="property_${propertyCounter}" 
@@ -158,6 +169,7 @@ function addProperty(name = '', value = '') {
         <small class="form-text text-muted">
             Use JSON format for complex types (objects, arrays, etc.)
         </small>
+        <input type="hidden" name="property_${propertyCounter}_type" value="${type}">
     `;
     container.appendChild(propertyDiv);
     
@@ -166,18 +178,64 @@ function addProperty(name = '', value = '') {
         const input = propertyDiv.querySelector('input[type="text"]');
         updatePropertyName(input, propertyCounter);
     }
+    
+    // Set the correct placeholder based on type
+    updatePropertyType(propertyDiv.querySelector('select'), propertyCounter);
 }
 
 function updatePropertyName(input, counter) {
     const textarea = document.getElementById(`property_${counter}`);
+    const hiddenType = document.querySelector(`input[name="property_${counter}_type"]`);
+    
     if (textarea && input.value) {
         textarea.name = input.value;
         textarea.id = input.value;
         
+        if (hiddenType) {
+            hiddenType.name = input.value + '_type';
+        }
+        
         // Update the label
         const label = input.parentElement;
         label.setAttribute('for', input.value);
-        label.innerHTML = input.value + label.innerHTML.substring(label.innerHTML.indexOf('<input'));
+    }
+}
+
+function updatePropertyType(select, counter) {
+    const hiddenType = document.querySelector(`input[name*="_type"][name*="${counter}"]`);
+    const textarea = document.getElementById(`property_${counter}`);
+    
+    if (hiddenType) {
+        hiddenType.value = select.value;
+    }
+    
+    // Update placeholder based on type
+    if (textarea) {
+        switch(select.value) {
+            case 'boolean':
+                textarea.placeholder = 'true or false';
+                break;
+            case 'integer':
+                textarea.placeholder = '123';
+                break;
+            case 'float':
+                textarea.placeholder = '123.45';
+                break;
+            case 'datetime':
+                textarea.placeholder = '2025-10-22T10:30:00 (ISO format)';
+                break;
+            case 'blob':
+                textarea.placeholder = 'SGVsbG8gV29ybGQ= (Base64 encoded binary data)';
+                break;
+            case 'array':
+                textarea.placeholder = '[1, 2, 3] or ["a", "b", "c"]';
+                break;
+            case 'object':
+                textarea.placeholder = '{"key": "value"}';
+                break;
+            default:
+                textarea.placeholder = 'Property value';
+        }
     }
 }
 
@@ -188,10 +246,10 @@ function removeProperty(button) {
 
 function addCommonProperties() {
     const currentDate = new Date().toISOString();
-    addProperty('name', '');
-    addProperty('description', '');
-    addProperty('created_at', `"${currentDate}"`);
-    addProperty('active', 'true');
+    addProperty('name', '', 'string');
+    addProperty('description', '', 'string');
+    addProperty('created_at', `"${currentDate}"`, 'string');
+    addProperty('active', 'true', 'boolean');
 }
 
 // Validate JSON before submission

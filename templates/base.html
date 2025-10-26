@@ -34,21 +34,111 @@
             font-size: 0.9em;
             white-space: pre-wrap;
         }
+        .badge-sm {
+            font-size: 0.7em;
+        }
+        .property-type {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .form-check-input:checked + .form-check-label {
+            color: #198754;
+            font-weight: 500;
+        }
+        .form-check-input:not(:checked) + .form-check-label {
+            color: #6c757d;
+        }
+        .form-check-label {
+            transition: color 0.2s ease;
+            font-weight: 500;
+            min-width: 50px;
+            text-align: center;
+        }
+        .font-monospace {
+            font-family: 'Courier New', Monaco, monospace !important;
+        }
+        .datetime-input {
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
+        <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-database"></i> Datastore Browser
             </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ url_for('index') }}">
+            
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                {% if current_project %}
+                <div class="dropdown me-3">
+                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="projectDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-project-diagram"></i> {{ current_project }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="projectDropdown">
+                        <li><h6 class="dropdown-header">Switch Project</h6></li>
+                        {% if available_projects %}
+                            {% for project in available_projects %}
+                            <li>
+                                <form method="POST" action="{{ url_for('switch_project') }}" style="margin: 0;">
+                                    <input type="hidden" name="project_name" value="{{ project }}">
+                                    <button type="submit" class="dropdown-item {% if project == current_project %}active{% endif %}">
+                                        {% if project == current_project %}<i class="fas fa-check"></i> {% endif %}{{ project }}
+                                    </button>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                                <i class="fas fa-plus"></i> Add New Project
+                            </a>
+                        </li>
+                        <li>
+                            <form method="POST" action="{{ url_for('refresh_projects') }}" style="margin: 0;">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sync-alt"></i> Refresh Projects
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+                <a class="nav-link text-white" href="{{ url_for('index') }}">
                     <i class="fas fa-home"></i> Home
                 </a>
             </div>
         </div>
     </nav>
+    
+    <!-- Add Project Modal -->
+    <div class="modal fade" id="addProjectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus"></i> Add New Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('add_project') }}">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="new_project_name" class="form-label">Project Name</label>
+                            <input type="text" class="form-control" id="new_project_name" name="new_project_name" 
+                                   placeholder="e.g., my-project-name" required>
+                            <small class="form-text text-muted">
+                                Enter the project name/ID used in your datastore emulator
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}

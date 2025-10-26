@@ -16,7 +16,7 @@
                 <h6 class="card-title">Connection Info</h6>
                 <small class="text-muted">
                     <i class="fas fa-server"></i> {{ request.environ.get('DATASTORE_EMULATOR_HOST', 'localhost:8081') }}<br>
-                    <i class="fas fa-project-diagram"></i> {{ request.environ.get('GOOGLE_CLOUD_PROJECT', 'test-project') }}
+                    <i class="fas fa-project-diagram"></i> <strong>{{ current_project }}</strong>
                 </small>
             </div>
         </div>

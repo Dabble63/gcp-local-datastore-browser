@@ -70,8 +70,17 @@
                         {% if not key.startswith('__') %}
                             {% set ns.count = ns.count + 1 %}
                             {% if ns.count <= 3 %}
-                                <strong>{{ key }}:</strong> 
-                                <span class="text-muted">{{ value | format_value | truncate(50) }}</span>
+                                <strong>{{ key }}</strong> 
+                                <small class="text-muted">({{ value | get_type }})</small>: 
+                                {% if value | get_type == 'boolean' %}
+                                    <span class="badge {% if value %}bg-success{% else %}bg-secondary{% endif %} badge-sm">
+                                        {% if value %}True{% else %}False{% endif %}
+                                    </span>
+                                {% elif value | get_type == 'datetime' %}
+                                    <code class="text-info small">{{ value | format_value | truncate(25) }}</code>
+                                {% else %}
+                                    <span class="text-muted">{{ value | format_value | truncate(50) }}</span>
+                                {% endif %}
                                 {% if not loop.last %}<br>{% endif %}
                             {% endif %}
                         {% endif %}

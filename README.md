@@ -6,11 +6,14 @@ A Python Flask-based GUI for browsing and editing Google Cloud Datastore entitie
 
 - 🔍 **Browse Entities**: View all entity kinds/tables in your local datastore
 - 📊 **Paginated Views**: Handle large datasets with pagination
-- ✏️ **Edit Entities**: Modify entity properties with validation
+- ✏️ **Edit Entities**: Modify entity properties with validation and type preservation
 - ➕ **Create Entities**: Add new entities with custom properties
 - 🗑️ **Delete Entities**: Remove entities with confirmation
 - 🎨 **Modern UI**: Clean, responsive Bootstrap interface
 - 🔧 **JSON Support**: Handle complex data types (objects, arrays)
+- 📁 **Multi-Project Support**: Switch between different GCP projects in the emulator
+- 🔄 **Dynamic Project Discovery**: Automatically detect available projects with data
+- 💾 **Type Preservation**: Maintains correct data types (boolean, datetime, blob, etc.)
 - 🚀 **Easy Setup**: Simple configuration for local development
 
 ## Prerequisites
@@ -100,6 +103,18 @@ A Python Flask-based GUI for browsing and editing Google Cloud Datastore entitie
 
 ## Usage
 
+### Multi-Project Support
+
+The browser supports working with multiple GCP projects in the same emulator instance:
+
+1. **Project Dropdown**: Click the project dropdown in the navigation bar to see available projects
+2. **Switch Projects**: Select a different project to browse its entities
+3. **Add New Project**: Click "Add New Project" to manually add a project by name
+4. **Refresh Projects**: Click "Refresh Projects" to rescan the emulator for projects with data
+5. **Auto-Discovery**: The system automatically detects projects that contain entities
+
+The application maintains your selected project in the session and will remember it as you browse.
+
 ### Browsing Entities
 
 1. **Home Page**: Shows all available entity kinds/tables
@@ -124,14 +139,22 @@ A Python Flask-based GUI for browsing and editing Google Cloud Datastore entitie
 
 ### Data Types
 
-The browser supports all standard Datastore data types:
+The browser supports all standard Datastore data types with proper type preservation:
 
 - **Strings**: Plain text values
 - **Numbers**: Integers and floats (123, 45.67)
-- **Booleans**: true or false
+- **Booleans**: true/false with checkbox interface
+- **Datetime**: ISO 8601 format with timezone preservation (2025-10-27T14:30:00-04:00)
+- **Blob/Bytes**: Binary data with base64 encoding/decoding
 - **Arrays**: JSON arrays [1, 2, 3] or ["a", "b", "c"]
 - **Objects**: JSON objects {"key": "value", "nested": {"data": 123}}
 - **Null**: null values
+
+**Type Preservation Features**:
+- Boolean fields use checkboxes with dynamic True/False labels
+- Datetime fields preserve timezone information
+- Blob fields handle binary data via base64 encoding
+- All types are correctly stored and retrieved from the datastore
 
 ### JSON Format Examples
 
@@ -180,12 +203,14 @@ The application can be configured via environment variables in the `.env` file:
 ```bash
 # Datastore emulator settings
 DATASTORE_EMULATOR_HOST=localhost:8081
-GOOGLE_CLOUD_PROJECT=test-project
+GOOGLE_CLOUD_PROJECT=your-project-name  # Default project (can be changed via UI)
 
 # Flask settings
 FLASK_ENV=development
 FLASK_DEBUG=True
 ```
+
+**Note**: The `GOOGLE_CLOUD_PROJECT` setting defines the default project when the app starts. You can switch between projects using the project dropdown in the UI without restarting the application.
 
 ## Project Structure
 
@@ -227,15 +252,17 @@ If you can't connect to the datastore:
 
 If no entities appear:
 
-1. **Create test data** using the Google Cloud SDK:
+1. **Check the selected project**: Use the project dropdown to switch to the correct project
+2. **Refresh projects**: Click "Refresh Projects" in the dropdown to rescan for available projects
+3. **Create test data** using the Google Cloud SDK or the included test data script:
    ```bash
    # Set environment for emulator
    $(gcloud beta emulators datastore env-init)
    
-   # Use gcloud or your application to create test entities
+   # Run the test data creator (if available)
+   python create_test_data.py
    ```
-
-2. **Check project ID**: Ensure `GOOGLE_CLOUD_PROJECT` matches your emulator setup
+4. **Verify project ID**: Ensure you're viewing the correct project where your data exists
 
 ### Import Errors
 
